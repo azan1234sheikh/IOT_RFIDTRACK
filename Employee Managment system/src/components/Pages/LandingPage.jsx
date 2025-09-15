@@ -257,7 +257,7 @@ const LandingPage = ({handlelogin}) => {
   _open={{
     animation: "fade-in 900ms ease-out",
   }} className="text-lg text-white/90 mb-10 leading-relaxed max-w-lg">
-                RFIDTRACK is a real-time IOT Based employee management solution which enables you to monitor your employees Attendance In Real Time Using Dedicated Embedded IOT Based Device,It aslo Allows
+                RFIDTRACK is a real-time IOT Based employee management solution which enables you to monitor your employees Attendance In Real Time Using Dedicated Battery Powered Embedded IOT(Internet Of Things) Based Device,It also Allows
                 Assign Tasks , provide Realtime Data and set customized alerts, in an easy way.
               </Box>
               <div className="flex flex-col sm:flex-row  gap-4">
