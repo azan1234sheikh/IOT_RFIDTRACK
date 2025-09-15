@@ -1,11 +1,12 @@
-import React from 'react'
-import { Box, VStack ,Table, Stack, Flex,Text, Center,SimpleGrid} from '@chakra-ui/react';
+import React,{useNavigate} from 'react'
+import { Box, VStack ,Table, Stack,CloseButton,Portal, useDisclosure, Flex,Text, Center,SimpleGrid, Button,Drawer} from '@chakra-ui/react';
 import SideBar from './Sidebar';
 import EmployeesDataHook from '../../context/EmployeesDataHook';
 import EmployeeCard from './EmployeeCard';
-
+import { Bell, Menu } from "lucide-react";
+import SidebarContent from './SidebarContent';
 const Employeeinfo = () => {
-
+const { isOpen, onOpen, onClose } = useDisclosure();
   const {loading,employeeData,employeeroot} = EmployeesDataHook();
        const filteredEmployee = (employeeData ?? []).filter((user) => user?.role === "Employee");
          console.log(filteredEmployee);
@@ -25,7 +26,7 @@ const Employeeinfo = () => {
   color="black"
 >
   <Flex
-    direction={{ base: "column", md: "row" }}
+    direction={{ base: "row", md: "row" }}
     align={{ base: "flex-start", md: "center" }}
     justify="space-between"
     gap={4}
@@ -33,12 +34,37 @@ const Employeeinfo = () => {
     <Text
       
       display={{ base: "block", md: "inline" }}
-      fontSize={{ base: "10px", md: "23px" }}
+      fontSize={{ base: "20px", md: "23px" }}
       fontWeight={{ base: "medium", md: "medium" }}
     >
       Employee Info
     </Text>
+    <Drawer.Root  open={isOpen} onOpenChange={(val) => !val.open && onClose()}>
+            <Drawer.Trigger asChild>
+              <Box display={{ base: "block", md: "none" }}>
+                <Menu />
+              </Box>  
+            </Drawer.Trigger>
+                  <Portal>
+                    <Drawer.Backdrop />
+                    <Drawer.Positioner>
+                      <Drawer.Content>
+                        <Drawer.Header>
+                          <Drawer.Title>IOT EMS</Drawer.Title>
+                        </Drawer.Header>
+                        <Drawer.Body>
+                          <SidebarContent/>
+                        </Drawer.Body>
+                        
+                        <Drawer.CloseTrigger asChild close={onClose}>
+                          <CloseButton size="sm" />
+                        </Drawer.CloseTrigger>
+                      </Drawer.Content>
+                    </Drawer.Positioner>
+                  </Portal>
+          </Drawer.Root>
   </Flex>
+
 </Box>
 
 

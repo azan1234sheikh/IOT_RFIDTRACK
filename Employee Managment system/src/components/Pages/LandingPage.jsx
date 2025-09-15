@@ -23,91 +23,11 @@ const LandingPage = ({handlelogin}) => {
   }
 
   return (
-//     <div className="min-h-screen bg-gradient-to-b from-emerald-800 to-emerald-500">
-//     <nav className="fixed top-0 w-full z-50 bg-emerald-900/90 backdrop-blur-sm">
-//       <div className="container mx-auto px-4 py-3">
-//         <div className="flex items-center justify-between">
-//           <div className="text-2xl font-bold text-white">EMS</div>
-//           <div className="hidden md:flex items-center space-x-8">
-//             <a  className="text-white hover:text-emerald-200 transition-colors">Home</a>
-//             <a  className="text-white hover:text-emerald-200 transition-colors">Insights</a>
-//             <a className="text-white hover:text-emerald-200 transition-colors">Features</a>
-//             <a  className="text-white hover:text-emerald-200 transition-colors">Contact</a>
-//             <a  onClick={btn} className="bg-white text-emerald-800 px-4 py-2 rounded-lg hover:bg-emerald-100 transition-colors">Login</a>
-//           </div>
-//           <button className="md:hidden text-white">
-//             <svg onClick={()=>setOpen(!Open)} className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-//               {/* <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /> */}
-//             </svg>
-//           </button>
-//           {Open ? <X size={24}/>:(
-//             <Drawer.Root Open={Open} onOpenChange={(e) => setOpen(e.Open)}>
-//                     <Drawer.Trigger asChild>
-//                       <Button className="md:hidden text-white" color={"white"} size="sm">
-//                         <Menu size={55}/>
-//                       </Button>
-//                     </Drawer.Trigger>
-//                     <Portal>
-//                       <Drawer.Backdrop /> 
-//                       <Drawer.Positioner>
-//                         <Drawer.Content>
-//                           <Drawer.Header>
-//                             <Drawer.Title> IOT EMS</Drawer.Title>
-//                           </Drawer.Header>
-//                           <Drawer.Body>
-//                          <div className="flex flex-col space-y-4 md:flex-row md:space-y-0 md:space-x-8 items-center">
-//   <a href="#" className="text-black hover:text-emerald-200 transition-colors">
-//     Home
-//   </a>
-//   <a href="#" className="text-black hover:text-emerald-200 transition-colors">
-//     Insights
-//   </a>
-//   <a href="#" className="text-black hover:text-emerald-200 transition-colors">
-//     Features
-//   </a>
-//   <a href="#" className="text-black hover:text-emerald-200 transition-colors">
-//     Contact
-//   </a>
-//   <a
-//     onClick={btn}
-//     className="bg-white text-emerald-800 px-4 py-2 rounded-lg hover:bg-emerald-100 transition-colors"
-//   >
-//     Login
-//   </a>
-// </div>
-
-//                           </Drawer.Body>
-//                           <Drawer.Footer>
-                            
-//                           </Drawer.Footer>
-//                           <Drawer.CloseTrigger asChild>
-//                             <CloseButton size="sm" />
-//                           </Drawer.CloseTrigger>
-//                         </Drawer.Content>
-//                       </Drawer.Positioner>
-//                     </Portal>
-//                   </Drawer.Root>
-//           )
-
-//           }
-//         </div>
-//       </div>
-//     </nav>
-//     <main>
-//       <Hero />
-//       <Features />
-//       <Stats />
-//       <Testimonials />
-//       <CTA />
-//     </main>
-//     <Footer />
-//   </div>
-
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="relative z-50 bg-transparent ">
         <div className="container mx-auto px-0 sm:px-0 lg:px-0">
-          <div className="flex h-19  items-center justify-between">
+          <div className="flex h-15 items-center justify-between">
             <div className="flex items-center">
               <nav className="fixed top-0 w-full z-50 bg-emerald-600 backdrop-blur-sm">
        <div className="container mx-auto px-4 py-3">
@@ -137,7 +57,7 @@ const LandingPage = ({handlelogin}) => {
                       <Drawer.Positioner>
                         <Drawer.Content>
                           <Drawer.Header>
-                            <Drawer.Title> IOT EMS</Drawer.Title>
+                            <Drawer.Title>RFID TRACK</Drawer.Title>
                           </Drawer.Header>
                           <Drawer.Body>
                          <div className="flex flex-col space-y-4 md:flex-row md:space-y-0 md:space-x-8 items-center">
@@ -329,7 +249,7 @@ const LandingPage = ({handlelogin}) => {
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             <div>
-              <Box data-state="open" _open={{ animationName: "fade-in, scale-in",animationDuration: "900ms",}}_closed={{ animationName: "fade-out, scale-out", animationDuration: "120ms",}} className="text-5xl lg:text-6xl font-bold text-white leading-tight mb-6">RFIDTRACK</Box>
+              <Box data-state="open" _open={{ animationName: "fade-in, scale-in",animationDuration: "900ms",}}_closed={{ animationName: "fade-out, scale-out", animationDuration: "120ms",}} className="text-5xl lg:text-6xl font-bold text-white leading-tight mt-9 sm:mb-6">RFIDTRACK</Box>
               <h2 className="text-3xl lg:text-4xl font-light text-white/95 mb-8 leading-tight">
                 A Secure Real-time Employee Management Solution
               </h2>
@@ -371,7 +291,7 @@ const LandingPage = ({handlelogin}) => {
                     <Image
                       src="./bg.png"
                       alt="Background"
-                      w={{ base: "80%", md: "80%", lg: "100%" }} // responsive width
+                      w={{ base: "auto", md: "80%", lg: "100%" }} // responsive width
                       h="auto"
                       // mb={{base:"300px",md:"0px"}}
                       objectFit="cover"
@@ -417,7 +337,7 @@ const LandingPage = ({handlelogin}) => {
             <Flex justify="center" align="center" w="full" p={4}>
 
           <Image  
-                      w={{ base: "60%", md: "80%", lg: "50%" }} // responsive width
+                      w={{ base: "auto", md: "80%", lg: "50%" }} // responsive width
                       h="auto"
                       objectFit="cover"
                       borderRadius="lg" src="./ss.png"/>

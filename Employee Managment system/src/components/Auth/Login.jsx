@@ -264,7 +264,7 @@ const Login = () => {
   const [password, setpassword] = useState("");
   const [matcheduser, setmatcheduser] = useState();
   const [uid, setuid] = useState("");
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [firebaseError, setFirebaseError] = useState(false);
 
   const loginFn = async (Auth, email, password, uid) => {
@@ -463,9 +463,10 @@ const Login = () => {
                 </Box>
                 
                 <Button
-                  isLoading={loading}
+                loading={loading}
                   isDisabled={loading || firebaseError}
                   type="submit"
+                  
                   w="full"
                   bg={colors.emerald600}
                   color="white"

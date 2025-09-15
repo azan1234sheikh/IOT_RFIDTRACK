@@ -160,13 +160,14 @@ const Attendance = () => {
 
        return {Emp_Data,LateToday, AttendanceCheck,filteredEmployee,filteredEmployee_Length,AbsentToday};
       
-  }, [employeeData])
- function GetWeekDay(dateString) {
-  const safeDate = dateString.includes("T") ? dateString : dateString + "T00:00:00";
-  const date = new Date(safeDate);
-  if (isNaN(date)) return null;
-  return date.toLocaleDateString("en-US", { weekday: "long" });
-}
+  }, [employeeData]);
+
+          function GetWeekDay(dateString) {
+            const safeDate = dateString.includes("T") ? dateString : dateString + "T00:00:00";
+            const date = new Date(safeDate);
+            if (isNaN(date)) return null;
+            return date.toLocaleDateString("en-US", { weekday: "long" });
+          }
     const {Emp_Data, AttendanceCheck ,LateToday,AbsentToday,filteredEmployee_Length} = EmployeeStats;
 
       const safeData = Array.isArray(Emp_Data) ? Emp_Data : [];
