@@ -1,6 +1,7 @@
 import React, { useEffect,useState,useCallback } from 'react'
 import { Auth,RTdatabase } from '../components/firebase'
 import { ref, set, push,get, child, onValue } from "firebase/database";
+import { toast } from 'react-toastify';
 
 const EmployeesDataHook = () => {
     const [employeeData,setemployeeData] = useState([]);
@@ -17,7 +18,7 @@ const EmployeesDataHook = () => {
     const employeesArray = Object.keys(data).map(uid => {
       const emp = data[uid];
       let rfidArray = [];
-
+     
       if (emp.rfidIndex && typeof emp.rfidIndex === "object") {
         rfidArray = Object.entries(emp.rfidIndex).map(([key, value]) => ({
           firebaseKey: key,
@@ -32,12 +33,14 @@ const EmployeesDataHook = () => {
       };
     });
     setemployeeData(employeesArray);
+    toast.success("Employee Attendance marked")
     setloading(false); 
   });
   const deviceStatus=onValue(devicedata,(snapshot)=>{
     const val = snapshot.val()||{};
     setdeviceData(val.Active);
-    console.log(deviceData)
+    console.log(deviceData);
+
   })
   return () => unsubscribe(),()=>deviceStatus();
 }, []);
