@@ -1,0 +1,695 @@
+// On Wemos Esp8266 
+#define ENABLE_USER_AUTH 
+#define ENABLE_DATABASE
+#include <FirebaseClient.h>
+#include <FirebaseJson.h>
+#include <SPI.h>
+#include "ExampleFunctions.h"
+#include <MFRC522.h>
+#include <ESP8266WiFi.h>
+#include <LiquidCrystal_I2C.h>
+#include <NTPClient.h>
+#include <WiFiUdp.h>
+// Hardware Configuration
+#define RST_PIN D1
+#define SS_PIN D2
+#define BLUE_LED D8
+#define I2C_SDA D3
+#define I2C_SCL D4
+
+// Constants
+#define SCAN_COOLDOWN 1500  // Reduced to 1.5 seconds for check-in/out
+#define MAX_ATTENDANCE 10
+#define WIFI_SSID ""
+#define WIFI_PASSWORD ""
+
+#define API_KEY ""
+#define USER_EMAIL "Private"
+#define USER_PASSWORD "Private"
+#define DATABASE_URL "Private"
+
+unsigned long msgUntil = 0;
+bool showingMsg = false;
+String employeeUidFound = ""; // Global variable to store the result
+
+//Prototype-fns
+bool verifyUser(const String &apiKey, const String &email, const String &password);
+const char* getName(const char* uid);
+void clearAttendanceRecord(int index);
+void GetDate(char* DateBuffer);
+void Lcdprint(const char* line1, const char* line2, unsigned long durationMs);
+void addAttendance(const char* uid);
+void push_async(const char* uid);
+String findEmployeeUidById(const char* uid);
+void processData(AsyncResult &aResult);
+void handleNewUser(const char* uid);
+void Get_Device_Id(char* deviceBuffer);
+void processRFID();
+void handleRFID();
+void getTimeString(char* buffer);
+const char* readCardData();
+bool writeUIDToBlock(const char* uid);
+bool deviceStatus = false;
+UserAuth user_auth(API_KEY, USER_EMAIL, USER_PASSWORD, 3000 /* expire period in seconds (<3600) */);
+FirebaseApp app;
+RealtimeDatabase Database;
+AsyncResult databaseResult;
+// AsyncResult queryResult;            // For findEmployeeUidById queries
+
+SSL_CLIENT ssl_client;
+
+using AsyncClient = AsyncClientClass;
+AsyncClient aClient(ssl_client);
+
+//RfID_PArt
+MFRC522 mfrc522(SS_PIN,RST_PIN);
+MFRC522::MIFARE_Key KeyA;
+LiquidCrystal_I2C lcd(0x27,16,2);
+WiFiUDP ntpUDP;
+NTPClient timeClient(ntpUDP, "pool.ntp.org", 18000);
+bool taskComplete = false;
+
+struct Attendence  {
+     char uid[16];
+     char name[16];
+     char checkInTime[20];
+     char checkOutTime[20];
+};
+
+Attendence AttendanceList[MAX_ATTENDANCE];
+uint8_t attendanceCount = 0;
+unsigned long lastscan = 0;
+char hexlogData[17]={0};
+char DeviceId[15]={0};
+unsigned long lastLCDUpdate = 0;
+char currentLine1[17] = {0};
+char currentLine2[17] = {0};
+static bool cardPresent = false;
+unsigned long lastTimeUpdate = 0;
+char key[25];
+char path[64];
+unsigned long lastRFIDScan = 0;
+char fullPath[80];
+
+void setup() {
+    Serial.begin(115200);
+    SPI.begin();
+    pinMode(BLUE_LED, OUTPUT);
+    digitalWrite(BLUE_LED, LOW);
+    mfrc522.PCD_Init();
+    Wire.begin(I2C_SDA, I2C_SCL);
+    lcd.init();
+    lcd.backlight();
+    Lcdprint("System Booting", "Connecting-Wifi", 500);
+    
+    // Initialize MIFARE Key
+    for (uint8_t i = 0; i < 6; i++) KeyA.keyByte[i] = 0xFF;
+    
+    // Connect to WiFi
+    WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+    Serial.print("Connecting to Wi-Fi");
+    while (WiFi.status() != WL_CONNECTED) {
+        Serial.print(".");
+        delay(300);
+    }
+    Lcdprint("WiFi Connected", WiFi.localIP().toString().c_str(), 1000);
+    
+    // Initialize Firebase
+    Firebase.printf("Firebase Client v%s\n", FIREBASE_CLIENT_VERSION);
+    set_ssl_client_insecure_and_buffer(ssl_client);
+    
+    // Verify user credentials
+    Lcdprint("Verifying", "user...", 500);
+    bool ret = verifyUser(API_KEY, USER_EMAIL, USER_PASSWORD);
+    Serial.println(ret ? "success" : "failed");
+    Lcdprint(ret ? "Authentication" : "Auth", "Failed", 1500);
+    
+    // Initialize Firebase app - ASYNC operation
+    Serial.println("Initializing app...");
+    initializeApp(aClient, app, getAuth(user_auth), auth_debug_print, "🔐 authTask");
+    
+    // WAIT for Firebase authentication to complete
+    Serial.print("Waiting for auth");
+    unsigned long authStart = millis();
+    while (!app.ready() && millis() - authStart < 30000) { // 30s timeout
+        Serial.print(".");
+        delay(500);
+        app.loop(); // Process auth tasks
+    }
+    
+    if (app.ready()) {
+        // Initialize database
+        app.getApp<RealtimeDatabase>(Database);
+        Database.url(DATABASE_URL);
+        // Initialize time
+        timeClient.begin();
+        timeClient.setTimeOffset(5 * 3600);
+        
+        if (timeClient.forceUpdate() || timeClient.forceUpdate()) { // Try twice
+            Lcdprint("Time Synced", timeClient.getFormattedTime().c_str(), 1000);
+        } else {
+            Lcdprint("NTP Failed", "Using RTC", 1000);
+        }
+        
+        // Final setup
+        Lcdprint("System Ready", "Scan RFID Tag", 500);
+        digitalWrite(BLUE_LED, HIGH);
+        deviceStatus = true;
+    } else {
+        Lcdprint("Firebase Failed", "Check Credentials", 2000);
+        digitalWrite(BLUE_LED, LOW);
+    }
+}
+void loop() {
+  app.loop();
+  if (WiFi.status() != WL_CONNECTED){ 
+    WiFi.reconnect();
+    Lcdprint("Reconnecting", "Wifi", 1000);
+    deviceStatus = false;
+    // UpdateStatus();
+    return;
+    };
+  if (millis() - lastTimeUpdate >= 1000) {
+    timeClient.update();
+    lastTimeUpdate = millis();
+
+  }
+
+  // — transient‑message guard —
+  if (showingMsg) {
+    if (millis() >= msgUntil) {
+      showingMsg = false;
+      lcd.clear();
+      lcd.setCursor(0, 0);
+      lcd.print("Scan RFID Tag");
+    } else {
+      return;
+    }
+  }
+
+  if (app.ready() && !taskComplete) {
+    taskComplete = true;
+    // … print tokens …
+  }
+  handleRFID();
+  processData(databaseResult);
+}
+
+
+bool verifyUser(const String &apiKey, const String &email, const String &password) 
+{
+    if (ssl_client.connected())
+        ssl_client.stop();
+
+    String host = "www.googleapis.com";
+    bool ret = false;
+
+    Serial.println("Attempting to connect to: " + host);
+    
+    if (ssl_client.connect(host.c_str(), 443) > 0)
+    {
+        Serial.println("Connected to server");
+        
+        String payload = "{\"email\":\"";
+        payload += email;
+        payload += "\",\"password\":\"";
+        payload += password;
+        payload += "\",\"returnSecureToken\":true}";
+
+        Serial.println("Request payload: " + payload);
+
+        String header = "POST /identitytoolkit/v3/relyingparty/verifyPassword?key=";
+        header += apiKey;
+        header += " HTTP/1.1\r\n";
+        header += "Host: ";
+        header += host;
+        header += "\r\n";
+        header += "Content-Type: application/json\r\n";
+        header += "Content-Length: ";
+        header += payload.length();
+        header += "\r\n\r\n";
+
+        Serial.println("Sending headers...");
+        if (ssl_client.print(header) == header.length())
+        {
+            Serial.println("Headers sent");
+            if (ssl_client.print(payload) == payload.length())
+            {
+                Serial.println("Payload sent");
+                unsigned long ms = millis();
+                while (ssl_client.connected() && ssl_client.available() == 0 && millis() - ms < 5000)
+                {
+                    delay(1);
+                }
+
+                Serial.println("Reading response...");
+                String response = "";
+                ms = millis();
+                while (ssl_client.connected() && ssl_client.available() && millis() - ms < 5000)
+                {
+                    String line = ssl_client.readStringUntil('\n');
+                    response += line + "\n";
+                    if (line == "\r") {
+                        // Headers received, now read the body
+                        String body = ssl_client.readString();
+                        response += body;
+                        Serial.println("Full response: " + response);
+                        
+                        // Check for success
+                        ret = (response.indexOf("HTTP/1.1 200 OK") > -1);
+                        if (!ret) {
+                            Serial.println("Authentication failed. Response:");
+                            Serial.println(response);
+                        }
+                        break;
+                    }
+                }
+            }
+            else
+            {
+                Serial.println("Failed to send payload");
+            }
+        }
+        else
+        {
+            Serial.println("Failed to send headers");
+        }
+        ssl_client.stop();
+    }
+    else
+    {
+        Serial.println("Connection to server failed");
+    }
+
+    return ret;
+}
+
+void processData(AsyncResult &aResult)
+{
+    // Exits when no result available when calling from the loop.
+    if (!aResult.isResult())
+        return;
+
+    if (aResult.isEvent())
+    {
+        Firebase.printf("Event task: %s, msg: %s, code: %d\n", aResult.uid().c_str(), aResult.eventLog().message().c_str(), aResult.eventLog().code());
+    }
+
+    if (aResult.isDebug())
+    {
+        Firebase.printf("Debug task: %s, msg: %s\n", aResult.uid().c_str(), aResult.debug().c_str());
+    }
+
+    if (aResult.isError())
+    {
+        Firebase.printf("Error task: %s, msg: %s, code: %d\n", aResult.uid().c_str(), aResult.error().message().c_str(), aResult.error().code());
+    }
+
+    if (aResult.available())
+    {
+        if (aResult.to<RealtimeDatabaseResult>().name().length())
+            Firebase.printf("task: %s, name: %s\n", aResult.uid().c_str(), aResult.to<RealtimeDatabaseResult>().name().c_str());
+            strncpy(key, aResult.to<RealtimeDatabaseResult>().name().c_str(), sizeof(key) - 1);
+            Serial.println(key);
+            Firebase.printf("task: %s, payload: %s\n", aResult.uid().c_str(), aResult.c_str());
+
+    }
+}
+
+// *** FIX: Proper RFID handling with minimal debouncing ***
+void handleRFID() {
+    static unsigned long lastResetTime = 0;
+    const unsigned long RESET_INTERVAL = 300; // Quick reset for responsiveness
+    
+    // Force reset RFID module periodically
+    if (millis() - lastResetTime > RESET_INTERVAL) {
+        mfrc522.PCD_Reset();
+        mfrc522.PCD_Init();
+        lastResetTime = millis();
+    }
+
+    // Simple debouncing - only prevent rapid successive scans
+    if (millis() - lastRFIDScan < SCAN_COOLDOWN) {
+        return; // Skip if within cooldown period
+    }
+
+    if (mfrc522.PICC_IsNewCardPresent()) {
+        if (mfrc522.PICC_ReadCardSerial()) {
+            lastRFIDScan = millis(); // Update last scan time
+            processRFID();
+            digitalWrite(BLUE_LED, HIGH);
+            
+            // Proper cleanup sequence
+            mfrc522.PICC_HaltA();
+            mfrc522.PCD_StopCrypto1();
+            delay(50);
+            digitalWrite(BLUE_LED, LOW);
+        }
+    }
+}
+
+void processRFID() {
+  char uid[16] = {0};
+  for (byte i = 0; i < mfrc522.uid.size; i++) {
+    sprintf(uid + strlen(uid), "%02X", mfrc522.uid.uidByte[i]);
+  }
+
+  Lcdprint("Scanned UID:", uid, 1000);
+  Serial.printf("[DEBUG] Scanned UID: %s\n", uid);
+
+  const char* storedUID = readCardData();
+  Serial.println(storedUID);
+
+  //  Read failed — abort
+  if (storedUID == nullptr) {
+    Lcdprint("Read Failed", "Try Again", 1000);
+    return;
+  }
+
+  // known card Case (UID matches what's written)
+  if (strcmp(uid, storedUID) == 0) {
+    // Serial.println("[INFO] Known user, proceeding...");
+    Lcdprint("KnownUser","Proceeding", 500);
+    addAttendance(uid);
+    push_async(uid);  // optional if you want to sync
+    return;
+  }
+
+  if (writeUIDToBlock(uid)) {
+    handleNewUser(uid);
+    Lcdprint("New card", "registered", 2000);
+    Serial.println("UID written to card");
+  } else {
+    Lcdprint("Write Failed", "Try Again", 2000);
+    Serial.println("[ERROR] Failed to write UID to card");
+  }
+}
+
+
+void addAttendance(const char* uid) {
+     if (!uid || attendanceCount < 0 || attendanceCount >= MAX_ATTENDANCE) {
+        Serial.println("[CRITICAL ERROR] Invalid state, resetting");
+        attendanceCount = 0;
+        return;
+    }
+   String employeeUid = findEmployeeUidById(uid);
+   Serial.println(employeeUid);
+    if (employeeUid == "") {
+                Lcdprint("Employee Not Found", "Register RFID", 2000);
+                Serial.println("No employee found with RFID: " + String(uid));
+                return;
+    }
+  char timeStr[20];
+  getTimeString(timeStr);
+  Serial.printf(timeStr);
+  // checkout if there was a prior check‑in
+  for (int i = 0; i < attendanceCount; i++) {
+    if (strcmp(AttendanceList[i].uid, uid) == 0 && strlen(AttendanceList[i].checkInTime) > 0  && strcmp(AttendanceList[i].checkOutTime,"Not Yet") == 0){
+      strncpy(AttendanceList[i].checkOutTime, timeStr, 19);
+      AttendanceList[i].checkOutTime[19] = '\0';
+      Lcdprint("Checked‑Out", timeStr, 2000);
+      Serial.println(AttendanceList[i].checkInTime);
+      Serial.println(AttendanceList[i].checkOutTime);
+      Serial.println(AttendanceList[i].name);
+      Serial.println(AttendanceList[i].uid);
+      
+      return;
+    }
+  }
+
+  // otherwise check‑in
+    if (attendanceCount < MAX_ATTENDANCE) {
+    strncpy(AttendanceList[attendanceCount].uid, uid, 15);
+    AttendanceList[attendanceCount].uid[15] = '\0';
+    strncpy(AttendanceList[attendanceCount].checkInTime, timeStr, 19);
+    strncpy(AttendanceList[attendanceCount].checkOutTime, "Not Yet", 19);
+    Serial.println("In check‑in");
+    Serial.println(AttendanceList[attendanceCount].checkOutTime);
+    Serial.println(AttendanceList[attendanceCount].checkInTime);
+    AttendanceList[attendanceCount].checkInTime[19] = '\0';
+    AttendanceList[attendanceCount].checkOutTime[19] = '\0';
+    Serial.println(AttendanceList[attendanceCount].checkOutTime);
+//    AttendanceList[attendanceCount].lastIndex = 0;
+     attendanceCount++;  
+    Lcdprint("Checked‑In", timeStr, 2000);
+  } else {
+    Lcdprint("Attendance Full", "", 1500);
+  }
+}
+bool writeUIDToBlock(const char* uid) {
+      uint8_t blankData[16] = {0};  // 16 bytes of zeros
+
+  uint8_t buff[16]={0}; strncpy((char*)buff,uid,15);
+  if(mfrc522.PCD_Authenticate(MFRC522::PICC_CMD_MF_AUTH_KEY_A,1,&KeyA,&mfrc522.uid)!=MFRC522::STATUS_OK) return false;
+  return mfrc522.MIFARE_Write(1,buff,16)==MFRC522::STATUS_OK;
+  
+}
+
+const char* readCardData() {
+    static char hexlogData[17]; 
+    uint8_t buffer[18] = {0};
+    uint8_t bufferLen = 18;
+
+    MFRC522::StatusCode authStatus = mfrc522.PCD_Authenticate(
+        MFRC522::PICC_CMD_MF_AUTH_KEY_A,
+        1,  // Block address
+        &KeyA,
+        &mfrc522.uid
+    );
+    if (authStatus != MFRC522::STATUS_OK) {
+        Serial.printf("[ERROR] Authentication Failed: 0x%02X\n", authStatus);
+        Lcdprint("Auth Failed", "Try Again", 1000);
+        return nullptr;
+    }
+
+    MFRC522::StatusCode readStatus = mfrc522.MIFARE_Read(1, buffer, &bufferLen);
+    if (readStatus != MFRC522::STATUS_OK) {
+        Serial.printf("[ERROR] Read Failed: 0x%02X\n", readStatus);
+        Lcdprint("Read Failed", "Try Again", 1000);
+        return nullptr;
+    }
+
+    // Convert buffer to printable ASCII
+    uint8_t i = 0;
+    while (i < 16 && isprint(buffer[i])) {
+        hexlogData[i] = buffer[i];
+        i++;
+    }
+    hexlogData[i] = '\0';
+
+    Serial.printf("[DEBUG] Card UID Stored: %s\n", hexlogData);
+    return hexlogData;
+}
+
+void push_async(const char* uid)
+{
+    if (!app.ready()) {
+        Lcdprint("Firebase Offline", "Retrying...", 1500);
+        return;
+    }
+    char timeStr[20], dateStr[11];
+    getTimeString(timeStr);
+    GetDate(dateStr);
+    Get_Device_Id(DeviceId);
+    Serial.println(DeviceId);
+    for (int i = 0; i < attendanceCount; i++) {
+        if (strcmp(AttendanceList[i].uid, uid) == 0) {
+             String employeeUid = findEmployeeUidById(uid);
+            // Serial.println(AttendanceList[i].lastIndex);
+            if (employeeUid == "") {
+                Lcdprint("Employee Not Found", "Register RFID", 2000);
+                Serial.println("No employee found with RFID: " + String(uid));
+                return;
+            }
+            object_t json, obj1, obj2, obj3, obj4 ,obj6;
+            JsonWriter writer;
+            writer.create(obj1, "uid", string_t(uid));
+            writer.create(obj2, "EmployeeName", string_t(hexlogData));
+            writer.create(obj3, "checkinTime",(string_t(AttendanceList[i].checkInTime)));
+            writer.create(obj4, "checkoutTime", (string_t(AttendanceList[i].checkOutTime)));
+            writer.create(obj6, "DeviceId", string_t(DeviceId));
+
+            object_t obj5;
+            writer.create(obj5, "date", string_t(dateStr));
+            // Combine all fields
+            object_t finalData; 
+            writer.join(finalData, 6, obj1, obj2, obj3, obj4, obj5, obj6);
+             Serial.println(finalData);
+            // String path = "/" + employeeUid + "/rfidIndex/";
+            snprintf(path,sizeof(path),"/%s/rfidIndex/",employeeUid.c_str());
+            Serial.println(path);
+            // Async set to Firebase
+            Serial.println((AttendanceList[i].checkInTime));
+            Serial.println(" Sending to Firebase...");
+             if (strlen(AttendanceList[i].checkInTime) != 0 && strcmp(AttendanceList[i].checkOutTime,"Not Yet") == 0){
+                 Database.push<object_t>(aClient, path, finalData, processData, "sendAttendance");
+                 Serial.println("First check-in");
+            }else if (strlen(AttendanceList[i].checkInTime) != 0 &&  strcmp(AttendanceList[i].checkOutTime,"Not Yet") != 0){
+                Serial.println(AttendanceList[i].checkOutTime);
+                String Path = "/" + employeeUid + "/rfidIndex/"+key;
+                // snprintf(fullPath, sizeof(fullPath),"/%s/rifdIndex/%s",employeeUid.c_str(),key);
+                Serial.println(fullPath);
+                Database.set<object_t>(aClient, Path, finalData, processData, "sendAttendance");
+                Serial.println("Updating check-in");
+            }else{
+                Lcdprint("Sending", "Failed", 1000);
+            }
+
+            Lcdprint("Data Sent", "Success", 2000);
+            Serial.println(" Data sent");
+            // *** FIX: Only clear record after checkout, not check-in ***
+            if (strcmp(AttendanceList[i].checkOutTime,"Not Yet") != 0 ) {
+                clearAttendanceRecord(i);
+                Serial.printf("[DEBUG] Record cleared for %s after checkout\n", uid);
+                // AttendanceList[i].lastIndex++;
+            }
+            return;
+        }
+    }
+
+    Lcdprint("UID Not", "RegistredOn-App", 1500);
+    Serial.println(" UID not in list");
+}
+
+void getTimeString(char* buffer) {
+    time_t epochTime = timeClient.getEpochTime();
+    struct tm *ptm = localtime(&epochTime);  // Use localtime instead
+    sprintf(buffer, "%02d:%02d:%02d", ptm->tm_hour, ptm->tm_min, ptm->tm_sec);
+}
+
+void Lcdprint(const char* line1, const char* line2, unsigned long durationMs){
+    if(strcmp(line1, currentLine1) !=0 || strcmp(line2,currentLine2) !=0){
+        lcd.clear();
+        lcd.setCursor(0,0);
+        lcd.print(line1);
+        lcd.setCursor(0,1);
+        lcd.print(line2);
+        strncpy(currentLine1, line1, 16);
+        strncpy(currentLine2, line2, 16);
+        currentLine1[16] = '\0';
+        currentLine2[16] = '\0';
+    }
+    msgUntil = millis() + durationMs;
+    showingMsg = true;
+}
+
+void GetDate(char* DateBuffer) {
+    time_t now = timeClient.getEpochTime();
+    if (now < 1600000000) { 
+        Serial.println("Invalid timestamp");
+        now = 1700000000; // Default to recent timestamp
+    }
+    struct tm *ptm = gmtime(&now);
+    snprintf(DateBuffer, 11, "%04d-%02d-%02d", ptm->tm_year + 1900, ptm->tm_mon + 1, ptm->tm_mday);
+    Serial.println(DateBuffer);
+}
+
+ void Get_Device_Id(char* deviceBuffer) {
+     uint32_t chipId = ESP.getChipId();
+     sprintf(deviceBuffer, "%06X", chipId);
+}
+
+    
+
+// *** CORRECTED *** //
+bool isKnownUser(const char* uid){
+    // Check if user already exists in the attendance system
+    for(byte i = 0; i < attendanceCount; i++){
+        if (strcmp(AttendanceList[i].uid, uid) == 0) {
+            return true;
+        }
+    }
+    return false; // New user - not in attendance list yet
+}
+
+
+void handleNewUser(const char* uid) {
+  // register so next tap is treated as known
+  if (attendanceCount < MAX_ATTENDANCE) {
+    strncpy(AttendanceList[attendanceCount].uid, uid, 15);
+    AttendanceList[attendanceCount].uid[15] = '\0';
+    AttendanceList[attendanceCount].checkInTime[0] = '\0';
+    AttendanceList[attendanceCount].checkOutTime[0] = '\0';
+    //  AttendanceList[attendanceCount].lastIndex = 0;
+    attendanceCount++;
+  }
+  // show “new user” for 2 s
+  Lcdprint("New RFID", uid, 2000);
+}
+const char* getName(const char* uid) {
+    if (strcmp(uid, "3AEF3F16") == 0) return "Azan Sheikh";
+    if (strcmp(uid, "D1F0973F") == 0) return "Noman";
+    return "Unknown";
+}
+
+void clearAttendanceRecord(int index) {
+    // Shift all records down
+    for (int i = index; i < attendanceCount-1; i++) {
+        memcpy(&AttendanceList[i], &AttendanceList[i+1], sizeof(Attendence));
+    }
+    attendanceCount--;
+}
+
+String findEmployeeUidById(const char* uid) {
+    String employeeUid = "";
+    String Dbpath = "/RFIDKEYS/" + String(uid);
+    Serial.println(Dbpath);
+    Database.get(aClient, Dbpath.c_str(), databaseResult);
+    // Wait for the result
+    unsigned long startTime = millis();
+    while (!databaseResult.available() && millis() - startTime < 10000) {
+        delay(100);
+        app.loop();
+    }
+    
+    // if (databaseResult.available() && !databaseResult.isError()) {
+    //     String jsonString = databaseResult.c_str();
+    //     Serial.println(jsonString);
+    //     // Look for the employee ID in the JSON string
+    //     String idPattern = "\"Id\":\"" + String(uid) + "\"";
+    //     int idPos = jsonString.indexOf(idPattern);
+        
+    //     if (idPos != -1) {
+    //         // Found the ID, now find the Firebase UID that contains this ID
+    //         // Look backwards to find the opening brace of this user object
+    //         int userStart = jsonString.lastIndexOf('{', idPos);
+    //         if (userStart != -1) {
+    //             // Look further backwards to find the Firebase UID (the key before this object)
+    //             int keyEnd = jsonString.lastIndexOf('"', userStart - 2);
+    //             int keyStart = jsonString.lastIndexOf('"', keyEnd - 1);
+                
+    //             if (keyStart != -1 && keyEnd != -1 && keyStart < keyEnd) {
+    //                 employeeUid = jsonString.substring(keyStart + 1, keyEnd);
+                    
+    //                 // Validate that this is a Firebase UID (not some other field)
+    //                 if (employeeUid.length() > 20) { // Firebase UIDs are typically 28 chars
+    //                     Serial.println("Found Firebase UID: " + employeeUid);
+    //                 } else {
+    //                     employeeUid = ""; // Not a valid UID
+    //                 }
+    //             }
+    //         }
+    //     }
+    // }
+    if (databaseResult.available() && !databaseResult.isError()) {
+        employeeUid = databaseResult.c_str();
+
+        // Remove quotes if the value is a JSON string
+        employeeUid.trim();
+        if (employeeUid.startsWith("\"") && employeeUid.endsWith("\"")) {
+            employeeUid = employeeUid.substring(1, employeeUid.length() - 1);
+        }
+        Serial.print("Found Firebase UID from index: ");
+        Serial.println(employeeUid);
+    } else {
+        if (databaseResult.isError()) {
+            Serial.print("Firebase error: ");
+            Serial.println(databaseResult.error().message().c_str());
+        } else {
+            Serial.println("RFID not found in index");
+        }
+    }
+    
+    Serial.println("Final Firebase UID: " + employeeUid);
+    return employeeUid;
+}
