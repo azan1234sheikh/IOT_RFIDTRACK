@@ -22,9 +22,9 @@ const EmployeeDashboard = () => {
     
   const { user } = useContext(AuthContext);
   const Currenttask =user.task;
-     console.log(Currenttask)
+    //  console.log(Currenttask)
   const filterTask = user.task.map((user)=>user).filter((val)=>val.TaskTitle==='Welcome Task');
-  console.log(filterTask[0]?.Date);
+  // console.log(filterTask[0]?.Date);
     const rfidArray = Object.entries(user.rfidIndex).map(([key, value]) => ({
           firebaseKey: key,
           ...value,
@@ -36,7 +36,7 @@ const EmployeeDashboard = () => {
     //  console.log(rfidArray.length -Employee_Att  );
   //  console.log(rfidArray.length);
    const Att_Percentage= (rfidArray.length/10)*100;
-   console.log(Att_Percentage)
+  //  console.log(Att_Percentage)
   return (
     <Stack bg="gray.100" direction="row" minH="screen">
       {/* Sidebar */}

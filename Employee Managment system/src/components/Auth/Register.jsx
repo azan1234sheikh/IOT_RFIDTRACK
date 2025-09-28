@@ -82,7 +82,7 @@ const Register = () => {
     try {
       await createUserWithEmailAndPassword(Auth, email, password);
       const user = Auth.currentUser;
-      console.log(user);
+      // console.log(user);
       // const newdoc = push(ref(RTdatabase, "employee"));
       
       // await set(newdoc, {

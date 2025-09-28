@@ -156,7 +156,7 @@ const Attendance = () => {
     const LateToday = filteredEmployee?.flatMap((item) => item.rfidIndex?.filter((val) =>ConvertWithlocaleTime(val.checkinTime) > "9:00:00 AM" && val?.date === CurrentDay) ?? []) ?? [];
    const AbsentToday = filteredEmployee_Length - AttendanceCheck ;
    console.log(LateToday.map((user)=>user));
-   console.log(Emp_Data)
+  //  console.log(Emp_Data)
 
        return {Emp_Data,LateToday, AttendanceCheck,filteredEmployee,filteredEmployee_Length,AbsentToday};
       

@@ -11,9 +11,9 @@ import CTA from "../UI/CTA";
 import Footer from "../UI/Footer";
 import { useState } from 'react'
 import { Menu, X } from 'lucide-react'
-import { motion } from "framer-motion"
+import { Wifi,ShieldHalf ,ChartNoAxesCombined ,FileText } from 'lucide-react';
 
-import { Button, CloseButton, Box,Drawer, Portal,Image,Flex} from "@chakra-ui/react"
+import { Button,Avatar, CloseButton, Box,Drawer, Portal,Image,Flex ,HStack,Card,For} from "@chakra-ui/react"
 
 const LandingPage = ({handlelogin}) => {
   const [Open, setOpen] = useState(false);
@@ -32,7 +32,14 @@ const LandingPage = ({handlelogin}) => {
               <nav className="fixed top-0 w-full z-50 bg-emerald-600 backdrop-blur-sm">
        <div className="container mx-auto px-4 py-3">
          <div className="flex items-center justify-between">
-           <div className="text-2xl font-bold text-white">RFID TRACK</div>
+         <div className="flex items-center space-x-3">
+                  <div className="relative">
+                    <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center shadow-lg">
+                      <div className="w-6 h-6 border-2 border-primary rounded transform rotate-45"></div>
+                      <div className="absolute w-4 h-4 bg-primary rounded-sm transform rotate-12 -translate-x-1 -translate-y-1"></div>
+                    </div>
+                  </div>
+                </div>    
            <div className="hidden md:flex items-center space-x-8">
              <a  className="text-white hover:text-emerald-200 transition-colors">Home</a>
              <a  className="text-white hover:text-emerald-200 transition-colors">Insights</a>
@@ -171,7 +178,6 @@ const LandingPage = ({handlelogin}) => {
                 <animate attributeName="opacity" values="0.15;0.4;0.15" dur="3.7s" repeatCount="indefinite" />
               </line>
             </g>
-            {/* Connection nodes */}
             <g fill="rgba(255,255,255,0.25)">
               <circle cx="300" cy="100" r="4">
                 <animate attributeName="r" values="3;7;3" dur="2s" repeatCount="indefinite" />
@@ -206,7 +212,6 @@ const LandingPage = ({handlelogin}) => {
                 <animate attributeName="opacity" values="0.25;0.7;0.25" dur="2.7s" repeatCount="indefinite" />
               </circle>
             </g>
-            {/* Larger accent nodes */}
             <g fill="rgba(255,255,255,0.35)">
               <circle cx="150" cy="200" r="6">
                 <animate attributeName="r" values="4;9;4" dur="3s" repeatCount="indefinite" />
@@ -225,7 +230,6 @@ const LandingPage = ({handlelogin}) => {
                 <animate attributeName="opacity" values="0.35;0.8;0.35" dur="2.8s" repeatCount="indefinite" />
               </circle>
             </g>
-            {/* Moving data packets */}
             <g fill="rgba(255,255,255,0.5)">
               <circle cx="0" cy="200" r="2">
                 <animateMotion dur="6s" repeatCount="indefinite">
@@ -293,7 +297,6 @@ const LandingPage = ({handlelogin}) => {
                       alt="Background"
                       w={{ base: "auto", md: "80%", lg: "100%" }} // responsive width
                       h="auto"
-                      // mb={{base:"300px",md:"0px"}}
                       objectFit="cover"
                       borderRadius="lg"
                     />
@@ -306,27 +309,33 @@ const LandingPage = ({handlelogin}) => {
       </section>
 
       {/* Features Section */}
-      <section id="features" className="py-20 sm:py-32 bg-white">
+      <section id="features" className="py-10 sm:py-32 bg-white">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl text-balance mb-4">
+          <div className="text-center">
+            <h2  _open={{ animationName: "fade-in, scale-in",animationDuration: "900ms",}}_closed={{ animationName: "fade-out, scale-out", animationDuration: "120ms",}} className="lg:text-4xl  md:text-xl sm:text-xl font-bold tracking-tight text-foreground text-balance mb-4">
               Complete IoT-Based Employee Tracking Solution
             </h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto text-pretty">
-              Enterprise-grade RFID hardware and software designed for reliability, security, and scalability.
+               RFID hardware and software designed for reliability, and scalability Real Time Tracking Using Dedicated IOT Device   .
             </p>
           </div>
+          
+                     <Flex justify="center">
 
+          <Image  
+                      w={{ base: "auto", md: "auto", lg: "auto" }} 
+                      objectFit="cover"
+                      borderRadius="lg" src="./hardware (1).png"/>
+              </Flex>
           
         </div>
       </section>
 
-      {/* Screenshots Section */}
-      <section id="screenshots" className="py-20 sm:py-32 bg-muted/30">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+      <section id="screenshots" className="">
+        <div className="container">
           <div className="text-center">
             <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl text-balance mb-4">
-              Explore Our Features Through Screenshots
+              Explore System Features Through Free Demo
             </h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto text-pretty mb-10">
               See how RFIDTRACK integrates seamlessly into your daily operations.
@@ -336,7 +345,7 @@ const LandingPage = ({handlelogin}) => {
         </div>
             <Flex justify="center" align="center" w="full" p={4}>
 
-          <Image  
+          <Image   className="relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-shadow duration-300"
                       w={{ base: "auto", md: "80%", lg: "50%" }} // responsive width
                       h="auto"
                       objectFit="cover"
@@ -345,21 +354,40 @@ const LandingPage = ({handlelogin}) => {
                  
       </section>
 
-      <section id="pricing" className="py-20 sm:py-32 bg-muted/30">
+      <section id="pricing" className="py-20 sm:py-22 bg-muted/30">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl text-balance mb-4">
-              Complete Hardware & Software Packages
+              Complete Features From Hardware To Software
             </h2>
             <p className="text-lg text-muted-foreground text-pretty mb-10">
-              Choose the solution that fits your facility size
             </p>
           </div>
+            <div className="place-items-center grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+                 <For each={data} >
+                  {(data)=>(
+                        <Card.Root  key={data.id} className="relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-shadow duration-300" width="251px" height="300px" variant="subtle" >
+                          <Card.Header lassName="pb-4" >
+                            <Avatar.Root size="lg" shape="rounded">
+                            {data.icon}
+                            </Avatar.Root>
+                            <Card.Title fontSize="xl" fontWeight="bold">{data.title}</Card.Title>
+                          </Card.Header>
 
+                          <Card.Body gap={2}>
+                                    <Card.Description fontSize="md">
+                                      {data.des}
+                                    </Card.Description>
+                          </Card.Body>
+                          <Card.Footer />
+                        </Card.Root>
+                        )}
+                  </For>
+                      
+                    </div>
         </div>
       </section>
 
-      {/* Final CTA Section */}
       <section className="bg-emerald-600 py-20 sm:py-32">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center">
@@ -387,7 +415,7 @@ const LandingPage = ({handlelogin}) => {
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
             <div className="col-span-1 md:col-span-2">
-              <h3 className="text-2xl font-bold text-primary-foreground mb-4">RFIDTRACK Pro</h3>
+              <h3 className="text-2xl font-bold text-primary-foreground mb-4">RFIDTRACK </h3>
               <p className="text-primary-foreground/80 mb-4 max-w-md">
                  IoT-based RFID employee management system designed by Undergrad Electronic Engineer with Expertise In Internet Of Things.
               </p>
@@ -421,36 +449,7 @@ const LandingPage = ({handlelogin}) => {
                 </Button>
               </div>
             </div>
-            <div>
-              <h4 className="text-primary-foreground font-semibold mb-4">Solutions</h4>
-              <ul className="space-y-2">
-                <li>
-                  <a href="#" className="text-primary-foreground/60 hover:text-primary-foreground transition-colors">
-                    Hardware Specs
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="text-primary-foreground/60 hover:text-primary-foreground transition-colors">
-                    API Documentation
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="text-primary-foreground/60 hover:text-primary-foreground transition-colors">
-                    Integration Guide
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="text-primary-foreground/60 hover:text-primary-foreground transition-colors">
-                    Security Features
-                  </a>
-                </li>
-              </ul>
-            </div>
-            
-          </div>
-          <div className="mt-8 pt-8 border-t border-primary-foreground/10">
-            <div className="flex flex-col md:flex-row justify-between items-center">
-              <p className="text-primary-foreground/60 text-sm">© 2024 RFIDTrack Pro. All rights reserved.</p>
+              <p className="text-primary-foreground/60 text-sm">© 2024 RFIDTrack . All rights reserved.</p>
               <div className="flex space-x-6 mt-4 md:mt-0">
                 <a
                   href="#"
@@ -467,10 +466,34 @@ const LandingPage = ({handlelogin}) => {
               </div>
             </div>
           </div>
-        </div>
+          <div className="mt-8 pt-8 border-t border-primary-foreground/10">
+           
+          </div>
       </footer>
     </div>
   );
 };
+const data = [{
+  id:1,
+   title :"IOT Based Tracking",
+   des:'Instant employee location and attendance tracking  using advanced RFID Module for realtime attendance tracking',
+   icon:<Wifi color="green"/>,
+},{
+    id:2,
 
+title :"Secure Access Control",
+des:'Multi-level security with encrypted RFID cards, biometric integration, and role-based access permissions.',
+   icon:<ShieldHalf color="green"/>,
+},{
+    id:3,
+
+  title :"Analytics Dashboard",
+  des:'IOT Based Attendance Data saving In Pdf & Excel format with attendance patterns, productivity metrics, and compliance tracking.',
+   icon:<ChartNoAxesCombined color="green"/>,
+},{
+    id:4,
+  title:'Mobile Integration',
+  des:'Native mobile apps for managers and employees with push notifications and offline capability.',
+  icon:<FileText color="green"/>
+}]
 export default LandingPage;

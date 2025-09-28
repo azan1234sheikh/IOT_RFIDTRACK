@@ -289,7 +289,7 @@ const AppContent = () => {
   const { user, loading } = useContext(AuthContext);
   //  const logout=async()=>{    await Auth.signOut()}        
   //  logout()
-  console.log("🖥️ AppContent render - User:", user, "Loading:", loading);
+  // console.log("🖥️ AppContent render - User:", user, "Loading:", loading);
   if (loading) {
     return (
       <Loading/>
@@ -301,7 +301,7 @@ const AppContent = () => {
     return user.role === "Admin" ? "/Admin/dashboard" : "/Employee/dashboard";
   };
 
-  console.log("Rendering routes, redirect path:", getRedirectPath());
+  // console.log("Rendering routes, redirect path:", getRedirectPath());
 
   return (
     <Router>

@@ -277,7 +277,7 @@ const Login = () => {
     }
     const allData = allDataSnapshot.val();
     let matchedUser = null;
-    console.log(allData);
+    // console.log(allData);
     for (const [userUID, userData] of Object.entries(allData)) {
       if (
             typeof userData === "object" &&
@@ -327,7 +327,7 @@ const Login = () => {
       // Use the Auth instance directly with signInWithEmailAndPassword
       const {credentials,matchedUser}=await loginFn(Auth,email,password,uid);
       toast.success("Login successful!");
-      console.log(matchedUser)
+      // console.log(matchedUser)
       // if(matchedUser?.role==="Admin"){
       //         navigate("/Admin/dashboard"); 
 

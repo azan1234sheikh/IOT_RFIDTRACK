@@ -35,7 +35,7 @@ const EmployeeInfoTable = () => {
   
   const {employeeData,loading} =EmployeesDataHook();
   const Filtered_Employee= employeeData.filter((user)=>user.role==="Employee");
-  console.log(Filtered_Employee);
+  // console.log(Filtered_Employee);
       let FilteredData = Filtered_Employee;
 
   const onSubmit = handleSubmit((data) => {

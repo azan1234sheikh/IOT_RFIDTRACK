@@ -22,13 +22,13 @@ import AuthProvider,{AuthContext} from '../../context/AuthProvider'
 const NewTask = () => {
 
   const firebaseUser =useMemo(()=>Auth.currentUser, []) ;
-  console.log(firebaseUser.uid)
+  // console.log(firebaseUser.uid)
   const {handleSubmit,register,reset,formState:{errors}}=useForm();
      
       const Ref = useRef(null);
 
     const {user,loading} = useContext(AuthContext);
-    console.log(user)
+    // console.log(user)
 
         const OnSubmit = handleSubmit(async(data)=>{
            try {
